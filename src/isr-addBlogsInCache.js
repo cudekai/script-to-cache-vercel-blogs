@@ -7,7 +7,7 @@ const OUTPUT_FILE = path.join(__dirname, "/data/", "updated_slugs.json");
 const SLUGS_TO_PROCESS = 30000;
 const REQUEST_DELAY_MS = 500;
 const FETCH_TIMEOUT_MS = 5000;
-const START_INDEX = 1154; // Set the starting index for processing
+// START_INDEX will be determined dynamically based on the output file size
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -46,13 +46,16 @@ async function scrapeWebsiteText(url, timeout) {
     }
 
     const data = await fetchResult.text();
+    // Basic HTML parsing to extract text content
     const scrapedText = data
-      .replace(/<style([\s\S]*?)<\/style>/gi, "")
-      .replace(/<script([\s\S]*?)<\/script>/gi, "")
-      .replace(/<[^>]+>/gi, " ");
+      .replace(/<style([\s\S]*?)<\/style>/gi, "") // Remove style tags
+      .replace(/<script([\s\S]*?)<\/script>/gi, "") // Remove script tags
+      .replace(/<[^>]+>/gi, " ") // Remove all HTML tags
+      .replace(/\s+/g, " ") // Replace multiple spaces with a single space
+      .trim(); // Trim whitespace from start/end
 
     console.log(`✅ Successfully scraped: ${url}`);
-    return { status: "successful", content: scrapedText.trim() };
+    return { status: "successful", content: scrapedText };
   } catch (err) {
     if (err.name === "AbortError") {
       console.error(`❌ Request timed out for: ${url}`);
@@ -73,6 +76,7 @@ async function getSlugStatusAndContent(url) {
 async function processSlugsFromFile() {
   let masterSlugsData = [];
   let existingProcessedData = [];
+  let startIndex = 0; // Initialize dynamically
 
   try {
     const data = await fs.readFile(INPUT_FILE, "utf8");
@@ -105,6 +109,10 @@ async function processSlugsFromFile() {
     }
   }
 
+  // Set START_INDEX dynamically
+  startIndex = existingProcessedData.length;
+  console.log(`Dynamic START_INDEX set to: ${startIndex}`);
+
   const processedSlugsMap = new Map();
   existingProcessedData.forEach((item) => {
     if (item.slug && item.status) {
@@ -115,28 +123,29 @@ async function processSlugsFromFile() {
 
   let newlyProcessedCount = 0;
   // Initialize finalSlugsData with existing processed items that have a status
-  const finalSlugsData = [
-    ...existingProcessedData.filter((item) => item.status),
-  ];
+  // This ensures we don't duplicate entries that were already in the output file
+  const finalSlugsData = [...existingProcessedData];
 
   console.log(
-    `Attempting to process up to ${SLUGS_TO_PROCESS} NEW slugs, starting from index ${START_INDEX}...`
+    `Attempting to process up to ${SLUGS_TO_PROCESS} NEW slugs, starting from index ${startIndex}...`
   );
 
-  for (let i = START_INDEX; i < masterSlugsData.length; i++) {
+  for (let i = startIndex; i < masterSlugsData.length; i++) {
     const masterItem = masterSlugsData[i];
     const currentSlug = masterItem.slug;
 
+    // This check is primarily for safety, as startIndex should prevent most re-processing
+    // but it handles cases where the input file might have duplicates or out-of-order entries
     if (processedSlugsMap.has(currentSlug)) {
-      // console.log(`⏩ Skipping already processed slug: ${currentSlug}`); // Optional: uncomment for more verbose logging
-      continue; // Skip to the next iteration if already processed
+      console.log(`⏩ Skipping already processed slug: ${currentSlug} (found in map)`);
+      continue;
     }
 
     if (newlyProcessedCount >= SLUGS_TO_PROCESS) {
       console.log(
         `🚫 Skipping new slug ${i + 1}/${
           masterSlugsData.length
-        }: ${currentSlug} (Processing limit reached)`
+        }: ${currentSlug} (Processing limit reached for new slugs)`
       );
       break; // Exit the loop if the processing limit for new slugs is reached
     }
@@ -176,9 +185,8 @@ async function processSlugsFromFile() {
       console.error(
         `Error writing to ${OUTPUT_FILE} during loop: ${error.message}`
       );
-      // Decide how to handle this error:
-      // - You might want to exit the process here to prevent data inconsistency
-      // - Or just log and continue, hoping the next save will succeed
+      // It's generally good to log and continue here, as an intermittent write error
+      // shouldn't necessarily stop the entire scraping process.
     }
     // --- End of saving logic ---
 
