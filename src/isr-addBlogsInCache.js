@@ -4,10 +4,10 @@ const { fetch } = require("cross-fetch");
 
 const INPUT_FILE = path.join(__dirname, "/data/", "all_blogs_slug.json");
 const OUTPUT_FILE = path.join(__dirname, "/data/", "updated_slugs.json");
-const SLUGS_TO_PROCESS = 10;
+const SLUGS_TO_PROCESS = 30000;
 const REQUEST_DELAY_MS = 500;
 const FETCH_TIMEOUT_MS = 5000;
-const START_INDEX = 1144; // Set the starting index for processing
+const START_INDEX = 1154; // Set the starting index for processing
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
