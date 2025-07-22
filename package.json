@@ -5,7 +5,8 @@
   "main": "download-blogs-slugs.js",
   "scripts": {
     "server": "node ./src/server.js",
-    "start": "npm run server && node ./src/isr-addBlogsInCache.js"
+    "start": "npm run server && node ./src/isr-addBlogsInCache.js",
+    "processedSlugs": "node ./src/isr-addBlogsInCache.js"
   },
   "keywords": [],
   "author": "",
