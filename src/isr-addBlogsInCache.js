@@ -118,7 +118,6 @@ async function processSlugsFromFile() {
     const newItem = {
       ...masterItem,
       status,
-      scraped_content: content,
     };
 
     finalSlugsData.push(newItem);
