@@ -6,7 +6,7 @@ const {
   setLastProcessedIndex,
 } = require("./progress-db");
 
-const INPUT_FILE = path.join(__dirname, "/data/", "all_blogs_slug.json");
+const INPUT_FILE = path.join(__dirname, "/data/", "recent-blog-urls.json");
 const OUTPUT_FILE = path.join(__dirname, "/data/", "updated_slugs.json");
 const SLUGS_TO_PROCESS = 30000;
 const REQUEST_DELAY_MS = 500;

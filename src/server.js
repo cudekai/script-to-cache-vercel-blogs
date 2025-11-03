@@ -5,56 +5,44 @@ const {
   setLastProcessedIndex,
   resetStorage,
 } = require("./progress-db");
+const { LANGUAGES } = require("./constant");
+const axios = require("axios");
+const { extractUrls } = require("./extract-url");
+const { cacheUrlsBackground, getCheckStatus } = require("./cache-links-logic");
 
 const fs = require("fs").promises;
 
 const app = express();
 const port = process.env.PORT || 8002;
 
-// 📥 Download the processed slugs file
-app.get("/download-processed-slugs", (req, res) => {
-  console.log("📥 Download request received");
-
-  const jsonFilePath = path.join(__dirname, "./data/", "updated_slugs.json");
-
-  res.download(jsonFilePath, "updated_slugs.json", (err) => {
-    if (err) {
-      console.error("❌ Error downloading file:", err);
-      res.status(500).send("Could not download file.");
-    }
-  });
+app.get("/extract-urls", async (req, res) => {
+  extractUrls();
+  res.send({ msg: "Extracted urls successfully!" });
 });
 
-app.get("/count-processed-slugs", async (req, res) => {
-  const jsonFilePath = path.join(__dirname, "./data/", "updated_slugs.json");
-
+app.get("/test-single-url", async (req, res) => {
+  const { url } = req.query;
+  console.log("url ", url);
   try {
-    const fileContent = await fs.readFile(jsonFilePath, "utf8");
-    const data = JSON.parse(fileContent);
-    const count = Array.isArray(data) ? data.length : 0;
-
-    res.json({ count });
-  } catch (error) {
-    console.error("Error reading processed slugs file:", error.message);
-    res.status(500).json({ error: "Failed to read processed slugs file." });
+    const vercelRes = await axios.get(url);
+    console.log("res", vercelRes.status);
+    return res.send({ message: "req resolved", url });
+  } catch (err) {
+    console.log("err occured", err);
+    res.status(500).send({ message: "err req received", status: err });
   }
 });
 
-app.get("/last-processed-item", async (req, res) => {
-  const index = await getLastProcessedIndex();
-  res.json({ lastProcessedIndex: index });
+// Start the process in the background
+app.get("/cache-urls", async (req, res) => {
+  cacheUrlsBackground(); // non-blocking
+  res.json({ success: true, message: "Started background URL check" });
 });
 
-app.get("/set-processed-item", async (req, res) => {
-  const { index } = req.query;
-
-  if (!index || isNaN(index)) {
-    return res.status(400).json({ error: "Invalid 'index' query param." });
-  }
-
-  const parsedIndex = parseInt(index, 10);
-  await setLastProcessedIndex(parsedIndex);
-  res.json({ success: true, lastProcessedIndex: parsedIndex });
+// Get current progress
+app.get("/check-status", (req, res) => {
+  const status = getCheckStatus();
+  res.json(status);
 });
 
 app.get("/reset-processed-item", async (req, res) => {
