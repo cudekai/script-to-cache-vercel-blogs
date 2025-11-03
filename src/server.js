@@ -39,6 +39,15 @@ app.get("/cache-urls", async (req, res) => {
   res.json({ success: true, message: "Started background URL check" });
 });
 
+app.get("/latest-processed-item", async (req, res) => {
+  try {
+    const item = await getLastProcessedIndex();
+    res.json({ success: true, item });
+  } catch (err) {
+    console.log("err in latest-processed-item finding");
+  }
+});
+
 // Get current progress
 app.get("/check-status", (req, res) => {
   const status = getCheckStatus();
